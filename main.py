@@ -20,13 +20,18 @@ class BitwiseInt:
 
     def count_holes(self):
         counting_mask = self.mask
-        count = 0
+        holes = []
         for i in range(9):
             if counting_mask % 2 == 0:
-                count += 1
-            counting_mask >> 1
-        return count
-            
+                holes.append(i)
+            counting_mask >>= 1
+        return holes
+
+class DecisionFrame:
+    def __init__(self, square, candidates):
+        self.square = square
+        self.candidates = candidates
+        self.next_candidate = 0
 
 class Board:
 
@@ -59,17 +64,17 @@ class Board:
 
                 self.columns[row] = self.get_mask_from_arr(new_col)
 
-                for box in range(9):
-                    new_box = []
+                self.solution[row * 9 + column] = inputted_arr[row][column]
 
-                    for i in self.BOX_COORDS[box]:
-                        row = i // 9
-                        column = i % 9
-                        new_box.append(inputted_arr[row][column])
+        for box in range(9):
+            new_box = []
 
-                    self.boxes[box] = self.get_mask_from_arr(new_box)
+            for i in self.BOX_COORDS[box]:
+                box_row = i // 9
+                box_column = i % 9
+                new_box.append(inputted_arr[row][column])
 
-                self.solution[row * 9 + column] = inputted_arr[row, column]
+            self.boxes[box] = self.get_mask_from_arr(new_box)
 
         self.update_all_squares()
 
@@ -77,7 +82,7 @@ class Board:
         current = BitwiseInt(0)
         for i in range(9):
             if arr[i] != 0:
-                current.set_bit(i)
+                current.set_bit(arr[i] - 1)
 
         return current
 
@@ -108,6 +113,28 @@ class Board:
 
         return (box_row * 3) + box_column
 
+    def get_moves(self):
+        moves = []
+        for i in range(81):
+            current = self.squares[i]
+            if self.solution[i] != 0:
+                continue
+
+            holes = current.count_holes()
+            num_holes = len(holes)
+
+            for j in range(num_holes):
+                moves.append((i, holes[j], num_holes))
+
+        moves = sorted(moves, key = lambda index: index[2])
+
+        return moves
+
+    
+
+
+
+
     def print_values(self):
         print(F"Row masks:")
         for row in self.rows:
@@ -123,6 +150,9 @@ class Board:
             print(square.mask)
 
 class Game:
+
+    IS_SOLUTION = True
+
     def __init__(self, input_sudoku):
         self.game_stack = []
         self.board = Board()
@@ -144,7 +174,39 @@ class Game:
         self.board.boxes = frame[4]
         self.moves = frame[5]
 
-    
+    def main_loop(self):
+        reloop = True
+
+        if not self.IS_SOLUTION:
+            reloop = FalseI 
+
+        while reloop == True:
+
+            moves = self.board.get_moves()
+
+            move_tracker = 0
+            reloop = False
+
+            while moves[move_tracker] not in self.moves:
+                move_tracker += 1
+                if move_tracker == len(moves):
+                    self.pop_from_stack()
+
+                    if len(self.game_stack) == 0:
+                        self.IS_SOLUTION = False
+                    reloop = True
+                    break
+
+            current_move = moves[move_tracker]
+            
+            self.moves.append(current_move)
+            self.push_to_stack()
+
+
+
+            
+            
+
 
     
 

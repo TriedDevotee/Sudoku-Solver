@@ -18,6 +18,16 @@ class BitwiseInt:
     def get_bit_state(self, index):
         return ((self.mask & 0b000000001 << (index)) == (0b000000001 << (index)))
 
+    def count_holes(self):
+        counting_mask = self.mask
+        count = 0
+        for i in range(9):
+            if counting_mask % 2 == 0:
+                count += 1
+            counting_mask >> 1
+        return count
+            
+
 class Board:
 
     BOX_COORDS = [[0, 1, 2, 9, 10, 11, 18, 19, 20], 
@@ -36,6 +46,7 @@ class Board:
         self.columns = [BitwiseInt(0) for i in range(9)]
         self.boxes = [BitwiseInt(0) for i in range(9)]
         self.squares = [BitwiseInt(0) for i in range(81)]
+        self.solution = [0 for i in range(81)]
 
     def set_up_board(self, inputted_arr):
         for row in range(0, 9):
@@ -57,6 +68,8 @@ class Board:
                         new_box.append(inputted_arr[row][column])
 
                     self.boxes[box] = self.get_mask_from_arr(new_box)
+
+                self.solution[row * 9 + column] = inputted_arr[row, column]
 
         self.update_all_squares()
 
@@ -108,6 +121,32 @@ class Board:
         print(f"Square masks:")
         for square in self.squares:
             print(square.mask)
+
+class Game:
+    def __init__(self, input_sudoku):
+        self.game_stack = []
+        self.board = Board()
+        self.board.set_up_board(input_sudoku)
+        self.moves = []
+
+    def push_to_stack(self, square_index, square_value):
+        frame = (self.board.solution.copy(), self.board.squares.copy(),
+                 self.board.rows.copy(), self.board.columns.copy(),
+                 self.board.boxes.copy(), self.moves.copy())
+        self.game_stack.append(frame)
+
+    def pop_from_stack(self):
+        frame = self.game_stack.pop()
+        self.board.solution = frame[0]
+        self.board.squares = frame[1]
+        self.board.rows = frame[2]
+        self.board.columns = frame[3]
+        self.board.boxes = frame[4]
+        self.moves = frame[5]
+
+    
+
+    
 
 TEST_SUDOKU = [[1, 2, 3, 4, 5, 6, 7, 8, 9],
                [0, 2, 3, 4, 5, 6, 7, 8, 0],

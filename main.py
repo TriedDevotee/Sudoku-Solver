@@ -56,6 +56,7 @@ class Board:
         self.boxes = [BitwiseInt(0) for i in range(9)]
         self.squares = [BitwiseInt(0) for i in range(81)]
         self.solution = [0 for i in range(81)]
+        self.invalid_puzzle = False
 
     def set_up_board(self, inputted_arr):
         inputted_arr = np.array(inputted_arr)
@@ -85,6 +86,8 @@ class Board:
         current = BitwiseInt(0)
         for i in range(9):
             if arr[i] != 0:
+                if current.get_bit_state(arr[i] - 1):
+                    self.invalid_puzzle = True
                 current.set_bit(arr[i] - 1)
 
         return current
@@ -223,6 +226,9 @@ class Game:
         self.current_node = Node()
         self.current_node.children = self.populate_node_children()
         if self.current_node.children == [-1]:
+            self.is_solution = False
+
+        if self.board.invalid_puzzle:
             self.is_solution = False
 
     def populate_node_children(self):

@@ -119,7 +119,27 @@ class Board:
         self.boxes[square_box].mask |= digit_mask
 
         self.solution[square_index] = digit + 1
-        self.update_all_squares()
+        
+        #self.update_all_squares() This is inefficient
+
+        self.update_selected_squares(square_row, square_column, square_box)
+
+    def update_selected_squares(self, changed_row, changed_column, changed_box):
+        
+        for i in range(9):
+            square_position = (changed_row * 9) + i
+            self.squares[square_position].mask |= self.rows[changed_row].mask
+
+        for i in range(9):
+            square_position = (i * 9) + changed_column
+            self.squares[square_position].mask |= self.columns[changed_column].mask
+
+        for i in range(9):
+            box = self.BOX_COORDS[changed_box]
+            self.squares[box[i]].mask != self.boxes[changed_box].mask
+
+
+
 
     def remove_number(self, square_index, digit):
         square_row = square_index // 9
@@ -303,7 +323,7 @@ class Game:
             else:
                 self.current_node.children = self.populate_node_children()
             
-        return [-1]
+        return -1
 
 #Adding the boilerplating for the coursework
 def sudoku_solver(sudoku):

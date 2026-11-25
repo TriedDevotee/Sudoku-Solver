@@ -30,11 +30,12 @@ class BitwiseInt:
             counting_mask >>= 1
         return holes
 
-class DecisionFrame:
-    def __init__(self, square, candidates):
+class Node:
+    def __init__(self, square = None, digit = None):
+        self.children = []
         self.square = square
-        self.candidates = candidates
-        self.next_candidate = 0
+        self.digit = digit
+        self.current_child = 0
 
 class Board:
 
@@ -88,9 +89,15 @@ class Board:
 
     def update_all_squares(self):
         for i in range(81):
+
             row = i // 9
             column = i % 9
             box = self.calculate_box(i)
+
+            if i == 45:
+                print(bin(self.rows[row].mask))
+                print (bin(self.columns[column].mask))
+                print (bin(self.boxes[box].mask))
 
             new_mask = self.rows[row].mask
             new_mask |= self.columns[column].mask
@@ -103,39 +110,86 @@ class Board:
         square_column = square_index % 9
         square_box = self.calculate_box(square_index)
 
-        digit_mask = (0b000000001 << digit - 1)
+        digit_mask = (0b000000001 << digit)
 
         self.rows[square_row].mask |= digit_mask
         self.columns[square_column].mask |= digit_mask
         self.boxes[square_box].mask |= digit_mask
 
-        self.solution[square_index] = digit
+        self.solution[square_index] = digit + 1
+        self.update_all_squares()
+
+    def remove_number(self, square_index, digit):
+        square_row = square_index // 9
+        square_column = square_index % 9
+        square_box = self.calculate_box(square_index)
+
+        digit_mask = (0b111111111) - (0b000000001 << digit)
+
+        self.rows[square_row].mask &= digit_mask
+        self.columns[square_column].mask &= digit_mask
+        self.boxes[square_box].mask &= digit_mask
+
+        self.solution[square_index] = 0
+        self.update_all_squares()
 
     def calculate_box(self, square_index):
-        box_row = (square_index // 9) % 3
-        box_column = (square_index % 9) // 3
+        """box_row = (square_index // 9) % 3
+        box_column = ((square_index % 9) // 3)
 
-        return (box_row * 3) + box_column
+        print(f"Index: {square_index} Box Row: {box_row} Box Col: {box_column} Box: {(box_row * 3) + box_column}")
+
+        return (box_row * 3) + box_column"""
+
+        for box in range(9):
+            if square_index in self.BOX_COORDS[box]:
+                return box
 
     def get_moves(self):
         moves = []
+        for square_index in range(81):
+            current = self.squares[square_index]
+            if self.solution[square_index] != 0:
+                continue
+
+            holes = current.count_holes()
+            index_freq = len(holes)
+
+            for hole in holes:
+                moves.append((square_index, hole, index_freq))
+
+        return moves
+
+    def get_moves_for_square(self, square_index):
+        moves = []
+        square = self.squares[square_index]
+        holes = square.count_holes()
+
+        for hole in holes:
+            moves.append((square_index, hole))
+
+        return moves
+
+    def find_open_squares(self):
+        open_squares = []
+    
         for i in range(81):
-            current = self.squares[i]
             if self.solution[i] != 0:
                 continue
 
+            current = self.squares[i]
+
             if current.mask == 0b111111111:
-                return [-1]
+                return [-1] #kill the child
 
-            holes = current.count_holes()
-            num_holes = len(holes)
+            holes = len(current.count_holes())
 
-            for j in range(num_holes):
-                moves.append((i, j))
+            open_squares.append((i, holes))
 
-        moves = sorted(moves, key = lambda index: index[2])
+        open_squares = sorted(open_squares, key = lambda index: index[1])
+        return [square[0] for square in open_squares]
+        
 
-        return moves
 
     def print_values(self):
         print(F"Row masks:")
@@ -153,83 +207,134 @@ class Board:
 
 class Game:
 
-    IS_SOLUTION = True
-
     def __init__(self, input_sudoku):
+        self.is_solution = True
         self.game_stack = []
         self.board = Board()
         self.board.set_up_board(input_sudoku)
         self.moves = []
 
-        self.current_frame = DecisionFrame()
+        self.current_node = Node()
+        self.current_node.children = self.populate_node_children()
+        if self.current_node.children == [-1]:
+            self.is_solution = False
 
-    def push_to_stack(self, square, moves):
-        frame = DecisionFrame(square, moves)
-        self.game_stack.append(frame)
+    def populate_node_children(self):
+        open_squares = self.board.find_open_squares()
+
+        if open_squares == [-1]:
+            return [-1]
+
+        if open_squares == []:
+            return []
+
+        square = open_squares[0]
+
+        moves = self.board.get_moves_for_square(square)
+
+        children = []
+        for move in moves:
+            new_node = Node(move[0], move[1])
+            children.append(new_node)
+        
+        return children
+
+    def get_moves(self):
+        moves = self.board.get_moves()
+
+        if moves == [-1]:
+            return [-1]
+
+        moves = sorted(moves, key = lambda index: index[2])
+        moves = [move[:2] for move in moves]
+
+        #print (moves)
+
+        return moves
+
+    def push_to_stack(self):
+        self.game_stack.append(self.current_node)
 
     def pop_from_stack(self):
 
-        while len(self.game_stack) > 0:
-            frame = self.game_stack[-1]
+        while len(self.game_stack) > 1:
 
-            frame.next_candidate += 1
+            prev_node = self.game_stack.pop()
+            self.board.remove_number(prev_node.square, prev_node.digit)
 
-            if frame.next_candidate < len(frame.candidates):
-                return frame
+            prev_node.current_child += 1
 
-            self.game_stack.pop()
+            if prev_node.current_child < len(prev_node.children):
+                self.current_node = prev_node
+                return True
 
-        self.IS_SOLUTION = False
+        self.is_solution = False
         return None
 
+    def check_if_complete(self):
+        return 0 in self.board.solution
+
     def main_loop(self):
-        reloop = True
 
-        if not self.IS_SOLUTION:
-            reloop = False 
+        #ON TURN
+        """
+            - Take the next available child from the current node
+            - Push the current node to the stack
+            - Make the current node the next available
+            - Apply move described by current node
+            - Expand its children
+            - If no children, puzzle complete
+            - Otherwise, repeat
+            - If we find a contradiction, i.e. square not solved but no available
+                - Pop the previous node
+                - Increment the child counter
+                - Expand that next node
+                - If child counter == num children (out of range)
+                - Pop again
+        """
 
-        while reloop == True:
+        while self.is_solution:
 
-            moves = self.board.get_moves()
+            print(self.board.solution)
 
-            reloop = False
+            if self.current_node.children == [-1]:
+                if not self.pop_from_stack():
+                    return -1
 
-            while moves[move_tracker] not in self.moves:
-                move_tracker += 1
-                if move_tracker == len(moves):
-                    self.pop_from_stack()
-
-                    if len(self.game_stack) == 0:
-                        self.IS_SOLUTION = False
-                    reloop = True
-                    break
-
-            current_move = moves[move_tracker]
-            
-            self.moves.append(current_move)
+            next_node = self.current_node.children[self.current_node.current_child]
             self.push_to_stack()
+            self.current_node = next_node
 
+            self.board.place_number(self.current_node.square, self.current_node.digit)
 
+            self.current_node.children = self.populate_node_children()
 
-            
-            
+            if len(self.current_node.children) == 0:
 
+                if self.check_if_complete():
+                    return self.board.solution
 
-    
+                self.pop_from_stack()
+                continue
 
-TEST_SUDOKU = [[1, 2, 3, 4, 5, 6, 7, 8, 9],
-               [0, 2, 3, 4, 5, 6, 7, 8, 0],
-               [0, 2, 3, 4, 5, 6, 7, 0, 9],
-               [0, 2, 3, 4, 5, 6, 0, 8, 9],
-               [0, 2, 3, 4, 5, 0, 7, 8, 9],
-               [0, 2, 3, 4, 0, 6, 7, 8, 9],
-               [0, 2, 3, 0, 5, 6, 7, 8, 9],
-               [0, 2, 0, 4, 5, 6, 7, 8, 9],
-               [0, 0, 3, 4, 5, 6, 7, 8, 9]]
+            if self.current_node.children == [-1]:
+                self.pop_from_stack()
+                continue
 
-print(TEST_SUDOKU)
+        return [-1]
 
-test_board = Board()
-test_board.set_up_board(TEST_SUDOKU)
+TEST_SUDOKU = np.array([
+               [0, 6, 0, 0, 0, 1, 0, 0, 4],
+               [3, 0, 0, 0, 0, 0, 5, 2, 0],
+               [4, 0, 0, 0, 0, 0, 0, 0, 3],
+               [5, 1, 0, 9, 4, 0, 0, 0, 2],
+               [0, 3, 0, 0, 2, 8, 0, 7, 0],
+               [0, 0, 0, 0, 0, 0, 0, 1, 6],
+               [0, 0, 8, 0, 3, 0, 6, 0, 0],
+               [0, 0, 3, 0, 0, 5, 0, 0, 0],
+               [1, 0, 0, 0, 9, 2, 7, 0, 0]])
 
-test_board.print_values()
+game = Game(TEST_SUDOKU)
+solution = game.main_loop()
+
+print(solution)

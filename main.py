@@ -94,10 +94,10 @@ class Board:
             column = i % 9
             box = self.calculate_box(i)
 
-            if i == 45:
+            """if i == 45:
                 print(bin(self.rows[row].mask))
                 print (bin(self.columns[column].mask))
-                print (bin(self.boxes[box].mask))
+                print (bin(self.boxes[box].mask))"""
 
             new_mask = self.rows[row].mask
             new_mask |= self.columns[column].mask
@@ -134,12 +134,12 @@ class Board:
         self.update_all_squares()
 
     def calculate_box(self, square_index):
-        """box_row = (square_index // 9) % 3
+        box_row = (square_index // 9) // 3
         box_column = ((square_index % 9) // 3)
 
-        print(f"Index: {square_index} Box Row: {box_row} Box Col: {box_column} Box: {(box_row * 3) + box_column}")
+        #print(f"Index: {square_index} Box Row: {box_row} Box Col: {box_column} Box: {(box_row * 3) + box_column}")
 
-        return (box_row * 3) + box_column"""
+        return (box_row * 3) + box_column
 
         for box in range(9):
             if square_index in self.BOX_COORDS[box]:
@@ -314,7 +314,20 @@ TEST_SUDOKU = np.array([
                [0, 0, 3, 0, 0, 5, 0, 0, 0],
                [1, 0, 0, 0, 9, 2, 7, 0, 0]])
 
-game = Game(TEST_SUDOKU)
-solution = game.main_loop()
+#Adding the boilerplating for the coursework
+def sudoku_solver(sudoku):
+    game = Game(sudoku)
 
-print(solution)
+    solution = game.main_loop()
+
+    if solution == [-1]:
+        return np.array([-1])
+
+    arr_solution = np.array([
+                        solution[0:9], solution[9:18], solution[18:27],
+                        solution[27:36], solution[36:45], solution[45:54],
+                        solution[54:63], solution[63:72], solution[72:]
+                    ])
+    return arr_solution
+
+print(sudoku_solver(TEST_SUDOKU))

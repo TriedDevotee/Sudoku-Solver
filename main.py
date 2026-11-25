@@ -154,7 +154,7 @@ class Board:
 
         for i in range(9):
             box = self.BOX_COORDS[changed_box]
-            self.update_square(square_position)
+            self.update_square(box[i])
 
     def update_square(self, square_index):
         row = square_index // 9

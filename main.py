@@ -188,22 +188,6 @@ class Board:
 
         open_squares = sorted(open_squares, key = lambda index: index[1])
         return [square[0] for square in open_squares]
-        
-
-
-    def print_values(self):
-        print(F"Row masks:")
-        for row in self.rows:
-            print(row.mask)
-        print(f"Column masks:")
-        for column in self.columns:
-            print(column.mask)
-        print(F"Box masks:")
-        for box in self.boxes:
-            print(box.mask)
-        print(f"Square masks:")
-        for square in self.squares:
-            print(square.mask)
 
 class Game:
 
@@ -257,22 +241,25 @@ class Game:
 
     def pop_from_stack(self):
 
-        while len(self.game_stack) > 1:
+        while self.game_stack: #THIS WAS THE WHOLE ISSUE
 
             prev_node = self.game_stack.pop()
-            self.board.remove_number(prev_node.square, prev_node.digit)
+            self.board.remove_number(self.current_node.square, self.current_node.digit)
 
             prev_node.current_child += 1
+            self.current_node = prev_node
 
             if prev_node.current_child < len(prev_node.children):
-                self.current_node = prev_node
                 return True
 
         self.is_solution = False
         return None
 
     def check_if_complete(self):
-        return 0 in self.board.solution
+        for i in range(81):
+            if self.board.solution[i] == 0:
+                return False
+        return True
 
     def main_loop(self):
 
@@ -295,9 +282,11 @@ class Game:
 
         while self.is_solution:
 
-            print(self.board.solution)
-
             if self.current_node.children == [-1]:
+                if not self.pop_from_stack():
+                    return -1
+
+            if self.current_node.current_child == len(self.current_node.children):
                 if not self.pop_from_stack():
                     return -1
 
@@ -307,20 +296,11 @@ class Game:
 
             self.board.place_number(self.current_node.square, self.current_node.digit)
 
-            self.current_node.children = self.populate_node_children()
-
-            if len(self.current_node.children) == 0:
-
-                if self.check_if_complete():
-                    return self.board.solution
-
-                self.pop_from_stack()
-                continue
-
-            if self.current_node.children == [-1]:
-                self.pop_from_stack()
-                continue
-
+            if self.check_if_complete():
+                return self.board.solution
+            else:
+                self.current_node.children = self.populate_node_children()
+            
         return [-1]
 
 TEST_SUDOKU = np.array([

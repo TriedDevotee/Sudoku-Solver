@@ -136,7 +136,7 @@ class Board:
 
         for i in range(9):
             box = self.BOX_COORDS[changed_box]
-            self.squares[box[i]].mask != self.boxes[changed_box].mask
+            self.squares[box[i]].mask |= self.boxes[changed_box].mask
 
 
 
@@ -348,7 +348,7 @@ def sudoku_solver(sudoku):
 
 
     else:
-        print(solution)
+        #print(solution)
         arr_solution = np.array([
                         solution[0:9], solution[9:18], solution[18:27],
                         solution[27:36], solution[36:45], solution[45:54],

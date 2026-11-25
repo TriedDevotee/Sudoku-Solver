@@ -1,7 +1,10 @@
+import numpy as np
+
 class BitwiseInt:
     def __init__(self, in_mask):
         self.mask = in_mask #9 bit int for the missing values
-                                #full is when its all 1s
+                                #full is when no spaces available
+                                #means either contradiction in puzzle of solved number
 
     def flip_bit(self, index):
         self.mask ^= (0b000000001 << (index))
@@ -54,17 +57,12 @@ class Board:
         self.solution = [0 for i in range(81)]
 
     def set_up_board(self, inputted_arr):
-        for row in range(0, 9):
-            for column in range(0, 9):
-                self.rows[row] = self.get_mask_from_arr(inputted_arr[row])
+        for row in range(9):
+            self.rows[row] = self.get_mask_from_arr(inputted_arr[row])
 
-                new_col = []
-                for i in range(9):
-                    new_col.append(inputted_arr[i][column])
-
-                self.columns[row] = self.get_mask_from_arr(new_col)
-
-                self.solution[row * 9 + column] = inputted_arr[row][column]
+        for column in range(9):
+            new_column = [inputted_arr[i][column] for i in range(9)]
+            self.columns[column] = self.get_mask_from_arr(new_column)
 
         for box in range(9):
             new_box = []
@@ -72,9 +70,11 @@ class Board:
             for i in self.BOX_COORDS[box]:
                 box_row = i // 9
                 box_column = i % 9
-                new_box.append(inputted_arr[row][column])
+                new_box.append(inputted_arr[box_row][box_column])
 
             self.boxes[box] = self.get_mask_from_arr(new_box)
+
+        self.solution = inputted_arr.flatten().tolist()
 
         self.update_all_squares()
 
@@ -85,15 +85,6 @@ class Board:
                 current.set_bit(arr[i] - 1)
 
         return current
-
-    def update_squares(self, square_index):
-        square_row = square_index // 9
-        square_col = square_index % 9
-        square_box = self.calculate_box(square_index)
-
-        self.rows[square_row].mask |= self.squares[square_index].mask
-        self.columns[square_col].mask |= self.squares[square_index].mask
-        self.boxes[square_box].mask |= self.squares[square_index].mask
 
     def update_all_squares(self):
         for i in range(81):
@@ -106,6 +97,19 @@ class Board:
             new_mask |= self.boxes[box].mask
 
             self.squares[i].mask = new_mask
+
+    def place_number(self, square_index, digit):
+        square_row = square_index // 9
+        square_column = square_index % 9
+        square_box = self.calculate_box(square_index)
+
+        digit_mask = (0b000000001 << digit - 1)
+
+        self.rows[square_row].mask |= digit_mask
+        self.columns[square_column].mask |= digit_mask
+        self.boxes[square_box].mask |= digit_mask
+
+        self.solution[square_index] = digit
 
     def calculate_box(self, square_index):
         box_row = (square_index // 9) % 3
@@ -120,20 +124,18 @@ class Board:
             if self.solution[i] != 0:
                 continue
 
+            if current.mask == 0b111111111:
+                return [-1]
+
             holes = current.count_holes()
             num_holes = len(holes)
 
             for j in range(num_holes):
-                moves.append((i, holes[j], num_holes))
+                moves.append((i, j))
 
         moves = sorted(moves, key = lambda index: index[2])
 
         return moves
-
-    
-
-
-
 
     def print_values(self):
         print(F"Row masks:")
@@ -159,32 +161,37 @@ class Game:
         self.board.set_up_board(input_sudoku)
         self.moves = []
 
-    def push_to_stack(self, square_index, square_value):
-        frame = (self.board.solution.copy(), self.board.squares.copy(),
-                 self.board.rows.copy(), self.board.columns.copy(),
-                 self.board.boxes.copy(), self.moves.copy())
+        self.current_frame = DecisionFrame()
+
+    def push_to_stack(self, square, moves):
+        frame = DecisionFrame(square, moves)
         self.game_stack.append(frame)
 
     def pop_from_stack(self):
-        frame = self.game_stack.pop()
-        self.board.solution = frame[0]
-        self.board.squares = frame[1]
-        self.board.rows = frame[2]
-        self.board.columns = frame[3]
-        self.board.boxes = frame[4]
-        self.moves = frame[5]
+
+        while len(self.game_stack) > 0:
+            frame = self.game_stack[-1]
+
+            frame.next_candidate += 1
+
+            if frame.next_candidate < len(frame.candidates):
+                return frame
+
+            self.game_stack.pop()
+
+        self.IS_SOLUTION = False
+        return None
 
     def main_loop(self):
         reloop = True
 
         if not self.IS_SOLUTION:
-            reloop = FalseI 
+            reloop = False 
 
         while reloop == True:
 
             moves = self.board.get_moves()
 
-            move_tracker = 0
             reloop = False
 
             while moves[move_tracker] not in self.moves:

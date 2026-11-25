@@ -29,6 +29,7 @@ class BitwiseInt:
                 holes.append(i)
             counting_mask >>= 1
         return holes
+    
 
 class Node:
     def __init__(self, square = None, digit = None):
@@ -141,7 +142,27 @@ class Board:
             box = self.BOX_COORDS[changed_box]
             self.squares[box[i]].mask |= self.boxes[changed_box].mask
 
+    def undo_selected_squares(self, changed_row, changed_column, changed_box, digit):
 
+        for i in range(9):
+            square_position = (changed_row * 9) + i
+            self.update_square(square_position)
+
+        for i in range(9):
+            square_position = (i * 9) + changed_column
+            self.update_square(square_position)
+
+        for i in range(9):
+            box = self.BOX_COORDS[changed_box]
+            self.update_square(square_position)
+
+    def update_square(self, square_index):
+        row = square_index // 9
+        column = square_index % 9
+        box = self.calculate_box(square_index)
+
+        new_mask = (self.rows[row].mask | self.columns[column].mask | self.boxes[box].mask)
+        self.squares[square_index].mask = new_mask
 
 
     def remove_number(self, square_index, digit):
@@ -156,7 +177,7 @@ class Board:
         self.boxes[square_box].mask &= digit_mask
 
         self.solution[square_index] = 0
-        self.update_all_squares()
+        self.undo_selected_squares(square_row, square_column, square_box, digit)
 
     def calculate_box(self, square_index):
         box_row = (square_index // 9) // 3
@@ -365,14 +386,14 @@ def sudoku_solver(sudoku):
     raise NotImplementedError()
 
 
-TEST_SUDOKU = [[3, 7, 4, 5, 8, 0, 6, 2, 9],
- [8, 2, 5, 7, 9, 6, 4, 0, 1],
- [6, 9, 1, 2, 3 ,4 ,8, 7, 5],
- [1, 4, 2, 0, 5 ,3 ,7, 9 ,8],
- [7, 8, 6, 9, 4, 2, 1, 5, 3],
- [9, 5, 3, 8, 1, 7, 2, 4, 6],
- [4, 6, 9, 1, 7, 5, 3, 8, 2],
- [5, 1, 7, 3, 2, 8, 0, 6, 4],
- [2, 3, 8, 6, 0, 9, 5, 1, 7]]
+TEST_SUDOKU = [[0, 8, 0, 4, 3, 0, 0, 0, 0],
+ [0, 0, 5, 0, 0, 9, 0, 0, 0],
+ [6, 0, 0, 0, 8 ,0 ,0, 7, 0],
+ [0, 0, 0, 0, 9 ,0 ,0, 0 ,3],
+ [0, 0, 0, 8, 0, 7, 0, 0, 0],
+ [9, 0, 0, 0, 0, 0, 0, 5, 4],
+ [0, 6, 0, 0, 0, 0, 0, 0, 5],
+ [0, 0, 8, 0, 0, 0, 4, 0, 0],
+ [0, 4, 0, 0, 0, 6, 0, 1, 0]]
 
 print(sudoku_solver(TEST_SUDOKU))

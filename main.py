@@ -58,6 +58,8 @@ class Board:
         self.solution = [0 for i in range(81)]
 
     def set_up_board(self, inputted_arr):
+        inputted_arr = np.array(inputted_arr)
+        
         for row in range(9):
             self.rows[row] = self.get_mask_from_arr(inputted_arr[row])
 
@@ -303,31 +305,48 @@ class Game:
             
         return [-1]
 
-TEST_SUDOKU = np.array([
-               [0, 6, 0, 0, 0, 1, 0, 0, 4],
-               [3, 0, 0, 0, 0, 0, 5, 2, 0],
-               [4, 0, 0, 0, 0, 0, 0, 0, 3],
-               [5, 1, 0, 9, 4, 0, 0, 0, 2],
-               [0, 3, 0, 0, 2, 8, 0, 7, 0],
-               [0, 0, 0, 0, 0, 0, 0, 1, 6],
-               [0, 0, 8, 0, 3, 0, 6, 0, 0],
-               [0, 0, 3, 0, 0, 5, 0, 0, 0],
-               [1, 0, 0, 0, 9, 2, 7, 0, 0]])
-
 #Adding the boilerplating for the coursework
 def sudoku_solver(sudoku):
+
+    sudoku = np.array(sudoku, dtype = int)
+    sudoku = sudoku.tolist()
+    
     game = Game(sudoku)
 
     solution = game.main_loop()
 
-    if solution == [-1]:
-        return np.array([-1])
+    if solution == -1:
+        return np.array([[-1, -1, -1, -1, -1, -1, -1, -1, -1],
+                  [-1, -1, -1, -1, -1, -1, -1, -1, -1],
+                  [-1, -1, -1, -1, -1, -1, -1, -1, -1],
+                  [-1, -1, -1, -1, -1, -1, -1, -1, -1],
+                  [-1, -1, -1, -1, -1, -1, -1, -1, -1],
+                  [-1, -1, -1, -1, -1, -1, -1, -1, -1],
+                  [-1, -1, -1, -1, -1, -1, -1, -1, -1],
+                  [-1, -1, -1, -1, -1, -1, -1, -1, -1],
+                  [-1, -1, -1, -1, -1, -1, -1, -1, -1]])
 
-    arr_solution = np.array([
+
+    else:
+        print(solution)
+        arr_solution = np.array([
                         solution[0:9], solution[9:18], solution[18:27],
                         solution[27:36], solution[36:45], solution[45:54],
                         solution[54:63], solution[63:72], solution[72:]
                     ])
     return arr_solution
+# YOUR CODE HERE
+    raise NotImplementedError()
+
+
+TEST_SUDOKU = [[3, 7, 4, 5, 8, 0, 6, 2, 9],
+ [8, 2, 5, 7, 9, 6, 4, 0, 1],
+ [6, 9, 1, 2, 3 ,4 ,8, 7, 5],
+ [1, 4, 2, 0, 5 ,3 ,7, 9 ,8],
+ [7, 8, 6, 9, 4, 2, 1, 5, 3],
+ [9, 5, 3, 8, 1, 7, 2, 4, 6],
+ [4, 6, 9, 1, 7, 5, 3, 8, 2],
+ [5, 1, 7, 3, 2, 8, 0, 6, 4],
+ [2, 3, 8, 6, 0, 9, 5, 1, 7]]
 
 print(sudoku_solver(TEST_SUDOKU))

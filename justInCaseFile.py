@@ -29,6 +29,7 @@ class BitwiseInt:
                 holes.append(i)
             counting_mask >>= 1
         return holes
+    
 
 class Node:
     def __init__(self, square = None, digit = None):
@@ -56,6 +57,7 @@ class Board:
         self.boxes = [BitwiseInt(0) for i in range(9)]
         self.squares = [BitwiseInt(0) for i in range(81)]
         self.solution = [0 for i in range(81)]
+        self.invalid_puzzle = False
 
     def set_up_board(self, inputted_arr):
         inputted_arr = np.array(inputted_arr)
@@ -85,6 +87,8 @@ class Board:
         current = BitwiseInt(0)
         for i in range(9):
             if arr[i] != 0:
+                if current.get_bit_state(arr[i] - 1):
+                    self.invalid_puzzle = True
                 current.set_bit(arr[i] - 1)
 
         return current
@@ -119,7 +123,47 @@ class Board:
         self.boxes[square_box].mask |= digit_mask
 
         self.solution[square_index] = digit + 1
-        self.update_all_squares()
+        
+        #self.update_all_squares() This is inefficient
+
+        self.update_selected_squares(square_row, square_column, square_box)
+
+    def update_selected_squares(self, changed_row, changed_column, changed_box):
+        
+        for i in range(9):
+            square_position = (changed_row * 9) + i
+            self.squares[square_position].mask |= self.rows[changed_row].mask
+
+        for i in range(9):
+            square_position = (i * 9) + changed_column
+            self.squares[square_position].mask |= self.columns[changed_column].mask
+
+        for i in range(9):
+            box = self.BOX_COORDS[changed_box]
+            self.squares[box[i]].mask |= self.boxes[changed_box].mask
+
+    def undo_selected_squares(self, changed_row, changed_column, changed_box, digit):
+
+        for i in range(9):
+            square_position = (changed_row * 9) + i
+            self.update_square(square_position)
+
+        for i in range(9):
+            square_position = (i * 9) + changed_column
+            self.update_square(square_position)
+
+        for i in range(9):
+            box = self.BOX_COORDS[changed_box]
+            self.update_square(box[i])
+
+    def update_square(self, square_index):
+        row = square_index // 9
+        column = square_index % 9
+        box = self.calculate_box(square_index)
+
+        new_mask = (self.rows[row].mask | self.columns[column].mask | self.boxes[box].mask)
+        self.squares[square_index].mask = new_mask
+
 
     def remove_number(self, square_index, digit):
         square_row = square_index // 9
@@ -133,7 +177,7 @@ class Board:
         self.boxes[square_box].mask &= digit_mask
 
         self.solution[square_index] = 0
-        self.update_all_squares()
+        self.undo_selected_squares(square_row, square_column, square_box, digit)
 
     def calculate_box(self, square_index):
         box_row = (square_index // 9) // 3
@@ -203,6 +247,9 @@ class Game:
         self.current_node = Node()
         self.current_node.children = self.populate_node_children()
         if self.current_node.children == [-1]:
+            self.is_solution = False
+
+        if self.board.invalid_puzzle:
             self.is_solution = False
 
     def populate_node_children(self):
@@ -326,6 +373,7 @@ def sudoku_solver(sudoku):
                   [-1, -1, -1, -1, -1, -1, -1, -1, -1],
                   [-1, -1, -1, -1, -1, -1, -1, -1, -1]])
 
+
     else:
         #print(solution)
         arr_solution = np.array([
@@ -337,3 +385,15 @@ def sudoku_solver(sudoku):
 # YOUR CODE HERE
     raise NotImplementedError()
 
+
+TEST_SUDOKU = [[0, 8, 0, 4, 3, 0, 0, 0, 0],
+ [0, 0, 5, 0, 0, 9, 0, 0, 0],
+ [6, 0, 0, 0, 8 ,0 ,0, 7, 0],
+ [0, 0, 0, 0, 9 ,0 ,0, 0 ,3],
+ [0, 0, 0, 8, 0, 7, 0, 0, 0],
+ [9, 0, 0, 0, 0, 0, 0, 5, 4],
+ [0, 6, 0, 0, 0, 0, 0, 0, 5],
+ [0, 0, 8, 0, 0, 0, 4, 0, 0],
+ [0, 4, 0, 0, 0, 6, 0, 1, 0]]
+
+print(sudoku_solver(TEST_SUDOKU))

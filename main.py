@@ -196,7 +196,7 @@ class Board:
         new_bitwise = BitwiseInt(0b0)
 
         square_row = square_index // 9
-        square_column = square_row % 9
+        square_column = square_index % 9
         square_box = self.calculate_box(square_index)
         
         board_row = self.rows[square_row]

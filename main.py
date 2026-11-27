@@ -1,6 +1,6 @@
 import numpy as np
 
-class BitwiseInt:
+"""class BitwiseInt:
     def __init__(self, in_mask):
         self.mask = in_mask #9 bit int for the missing values
                                 #full is when no spaces available
@@ -28,7 +28,7 @@ class BitwiseInt:
             if counting_mask % 2 == 0:
                 holes.append(i)
             counting_mask >>= 1
-        return holes
+        return holes"""
     
 
 class Node:
@@ -159,6 +159,11 @@ class Board:
         self.solution[square_index] = 0
 
     def calculate_box(self, square_index):
+        #Gonna precompute values for speed - 1 list lookup is probably faster than calculating it all
+        #If I could use bit operations that'd be even faster
+        #Precomputing is about 3 times slower....
+
+
         box_row = (square_index // 9) // 3
         box_column = ((square_index % 9) // 3)
 
@@ -195,7 +200,8 @@ class Board:
         return moves
 
     def find_open_squares(self):
-        open_squares = []
+        best_square = -1
+        MRV_val = 10 #cant get 10 wrong 
     
         for i in range(81):
             if self.solution[i] != 0:
@@ -204,14 +210,19 @@ class Board:
             current = self.get_candidate_mask(i)
             
             if current == 0b111111111:
-                return [-1] #kill the child
+                return -1 #kill the child
 
             holes = 9 - current.bit_count()
 
-            open_squares.append((i, holes))
+            if holes == 1:
+                return i
 
-        open_squares = sorted(open_squares, key = lambda index: index[1])
-        return [square[0] for square in open_squares]
+            if holes < MRV_val:
+                MRV_val = holes
+                best_square = i
+
+        return best_square
+
 
     def get_candidate_mask(self, square_index):
         new_int = 0b000000000
@@ -219,6 +230,8 @@ class Board:
         square_row = square_index // 9
         square_column = square_index % 9
         square_box = self.calculate_box(square_index)
+
+        #print(square_index)
         
         board_row = self.rows[square_row]
         board_column = self.columns[square_column]
@@ -246,17 +259,12 @@ class Game:
             self.is_solution = False
 
     def populate_node_children(self):
-        open_squares = self.board.find_open_squares()
+        open_square = self.board.find_open_squares()
 
-        if open_squares == [-1]:
+        if open_square == -1:
             return [-1]
 
-        if open_squares == []:
-            return []
-
-        square = open_squares[0]
-
-        moves = self.board.get_moves_for_square(square)
+        moves = self.board.get_moves_for_square(open_square)
 
         children = []
         for move in moves:

@@ -32,15 +32,11 @@ class BitwiseInt:
     
 
 class Node:
-    def __init__(self, square = None, digit = None, row = None, column = None, box = None):
+    def __init__(self, square = None, digit = None):
         self.children = []
         self.square = square
         self.digit = digit
         self.current_child = 0
-
-        self.row = row
-        self.column = column
-        self.box = box
 
 class Board:
 
@@ -56,9 +52,15 @@ class Board:
     #I got annoyed by all the maths
 
     def __init__(self):
-        self.rows = [BitwiseInt(0) for i in range(9)]
+        """self.rows = [BitwiseInt(0) for i in range(9)]
         self.columns = [BitwiseInt(0) for i in range(9)]
-        self.boxes = [BitwiseInt(0) for i in range(9)]
+        self.boxes = [BitwiseInt(0) for i in range(9)]"""
+
+        #Can't believe I am actually phasing out BitwiseInt but the class overhead is just too high
+        self.rows = [0b000000000 for i in range(9)]
+        self.columns = [0b000000000 for i in range(9)]
+        self.boxes = [0b000000000 for i in range(9)]
+
         #self.squares = [BitwiseInt(0) for i in range(81)]
         self.solution = [0 for i in range(81)]
         self.invalid_puzzle = False
@@ -87,7 +89,7 @@ class Board:
 
         #self.update_all_squares()
 
-    def get_mask_from_arr(self, arr):
+    """def get_mask_from_arr(self, arr):
         current = BitwiseInt(0)
         for i in range(9):
             if arr[i] != 0:
@@ -95,6 +97,16 @@ class Board:
                     self.invalid_puzzle = True
                 current.set_bit(arr[i] - 1)
 
+        return current"""
+
+    def get_mask_from_arr(self, arr):
+        current = 0
+        for i in range(9):
+            if arr[i] != 0:
+                if ((current & 0b000000001 << (arr[i] - 1)) == (0b000000001 << (arr[i] - 1))):
+                    self.invalid_puzzle = True
+                current |= (0b000000001 << (arr[i] - 1))
+        
         return current
 
     def update_all_squares(self): #This might be unnecessary now
@@ -113,7 +125,7 @@ class Board:
             new_mask |= self.columns[column].mask
             new_mask |= self.boxes[box].mask
 
-            self.squares[i].mask = new_mask
+            #self.squares[i].mask = new_mask
 
     def place_number(self, square_index, digit):
         square_row = square_index // 9
@@ -122,9 +134,9 @@ class Board:
 
         digit_mask = (0b000000001 << digit)
 
-        self.rows[square_row].mask |= digit_mask
-        self.columns[square_column].mask |= digit_mask
-        self.boxes[square_box].mask |= digit_mask
+        self.rows[square_row] |= digit_mask
+        self.columns[square_column] |= digit_mask
+        self.boxes[square_box] |= digit_mask
 
         self.solution[square_index] = digit + 1
         
@@ -140,9 +152,9 @@ class Board:
 
         digit_mask = (0b111111111) - (0b000000001 << digit)
 
-        self.rows[square_row].mask &= digit_mask
-        self.columns[square_column].mask &= digit_mask
-        self.boxes[square_box].mask &= digit_mask
+        self.rows[square_row] &= digit_mask
+        self.columns[square_column] &= digit_mask
+        self.boxes[square_box] &= digit_mask
 
         self.solution[square_index] = 0
 
@@ -157,6 +169,15 @@ class Board:
         for box in range(9):
             if square_index in self.BOX_COORDS[box]:
                 return box
+            
+    def get_holes(self, mask):
+        counting_mask = mask
+        holes = []
+        for i in range(9):
+            if counting_mask % 2 == 0:
+                holes.append(i)
+            counting_mask >>= 1
+        return holes
 
     #Here lies where get_moves once stood
     #What was I thinking
@@ -166,7 +187,7 @@ class Board:
 
         square = self.get_candidate_mask(square_index)
         
-        holes = square.count_holes()
+        holes = self.get_holes(square)
 
         for hole in holes:
             moves.append((square_index, hole))
@@ -182,10 +203,10 @@ class Board:
 
             current = self.get_candidate_mask(i)
             
-            if current.mask == 0b111111111:
+            if current == 0b111111111:
                 return [-1] #kill the child
 
-            holes = 9 - current.mask.bit_count()
+            holes = 9 - current.bit_count()
 
             open_squares.append((i, holes))
 
@@ -193,7 +214,7 @@ class Board:
         return [square[0] for square in open_squares]
 
     def get_candidate_mask(self, square_index):
-        new_bitwise = BitwiseInt(0b0)
+        new_int = 0b000000000
 
         square_row = square_index // 9
         square_column = square_index % 9
@@ -203,9 +224,9 @@ class Board:
         board_column = self.columns[square_column]
         board_box = self.boxes[square_box]
 
-        new_bitwise.mask = (board_row.mask | board_column.mask | board_box.mask)
+        new_int = (board_row | board_column | board_box)
 
-        return new_bitwise
+        return new_int
 
 class Game:
 

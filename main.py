@@ -218,9 +218,12 @@ class Game:
         self.board.set_up_board(input_sudoku)
         self.moves = []
 
-        self.current_node = Node()
-        self.current_node.children = self.populate_node_children()
-        if self.current_node.children == [-1]:
+        #self.current_node = Node()
+
+        self.current_node = [[], None, None, 0]
+
+        self.current_node[0] = self.populate_node_children()
+        if self.current_node[0] == [-1]:
             self.is_solution = False
 
         if self.board.invalid_puzzle:
@@ -236,23 +239,12 @@ class Game:
 
         children = []
         for move in moves:
-            new_node = Node(move[0], move[1])
+            #new_node = Node(move[0], move[1])
+
+            new_node = [[], move[0], move[1], 0]
             children.append(new_node)
         
         return children
-
-    def get_moves(self):
-        moves = self.board.get_moves()
-
-        if moves == [-1]:
-            return [-1]
-
-        moves = sorted(moves, key = lambda index: index[2])
-        moves = [move[:2] for move in moves]
-
-        #print (moves)
-
-        return moves
 
     def push_to_stack(self):
         self.game_stack.append(self.current_node)
@@ -262,12 +254,12 @@ class Game:
         while self.game_stack: #THIS WAS THE WHOLE ISSUE
 
             prev_node = self.game_stack.pop()
-            self.board.remove_number(self.current_node.square, self.current_node.digit)
+            self.board.remove_number(self.current_node[1], self.current_node[2])
 
-            prev_node.current_child += 1
+            prev_node[3] += 1
             self.current_node = prev_node
 
-            if prev_node.current_child < len(prev_node.children):
+            if prev_node[3] < len(prev_node[0]):
                 return True
 
         self.is_solution = False
@@ -283,24 +275,24 @@ class Game:
 
         while self.is_solution:
 
-            if self.current_node.children == [-1]:
+            if self.current_node[0] == [-1]:
                 if not self.pop_from_stack():
                     return -1
 
-            if self.current_node.current_child == len(self.current_node.children):
+            if self.current_node[3] == len(self.current_node[0]):
                 if not self.pop_from_stack():
                     return -1
 
-            next_node = self.current_node.children[self.current_node.current_child]
+            next_node = self.current_node[0][self.current_node[3]]
             self.push_to_stack()
             self.current_node = next_node
 
-            self.board.place_number(self.current_node.square, self.current_node.digit)
+            self.board.place_number(self.current_node[1], self.current_node[2])
 
             if self.check_if_complete():
                 return self.board.solution
             else:
-                self.current_node.children = self.populate_node_children()
+                self.current_node[0] = self.populate_node_children()
             
         return -1
 

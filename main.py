@@ -1,35 +1,7 @@
 import numpy as np
+#import pytracy
 
-"""class BitwiseInt:
-    def __init__(self, in_mask):
-        self.mask = in_mask #9 bit int for the missing values
-                                #full is when no spaces available
-                                #means either contradiction in puzzle of solved number
-
-    def flip_bit(self, index):
-        self.mask ^= (0b000000001 << (index))
-
-    def set_bit(self, index):
-            self.mask |= (0b000000001 << (index))
-
-    def clear_bit(self, index):
-            self.mask &= ((0b111111111) - (0b000000001 << (index)))
-
-    def is_full(self):
-        return (self.mask == 0b111111111)
-
-    def get_bit_state(self, index):
-        return ((self.mask & 0b000000001 << (index)) == (0b000000001 << (index)))
-
-    def count_holes(self):
-        counting_mask = self.mask
-        holes = []
-        for i in range(9):
-            if counting_mask % 2 == 0:
-                holes.append(i)
-            counting_mask >>= 1
-        return holes"""
-    
+#pytracy.enable_tracing(True)    
 
 class Node:
     def __init__(self, square = None, digit = None):
@@ -37,6 +9,8 @@ class Node:
         self.square = square
         self.digit = digit
         self.current_child = 0
+
+##This is probably causing overhead too.
 
 class Board:
 
@@ -52,9 +26,6 @@ class Board:
     #I got annoyed by all the maths
 
     def __init__(self):
-        """self.rows = [BitwiseInt(0) for i in range(9)]
-        self.columns = [BitwiseInt(0) for i in range(9)]
-        self.boxes = [BitwiseInt(0) for i in range(9)]"""
 
         #Can't believe I am actually phasing out BitwiseInt but the class overhead is just too high
         self.rows = [0b000000000 for i in range(9)]
@@ -63,6 +34,8 @@ class Board:
 
         #self.squares = [BitwiseInt(0) for i in range(81)]
         self.solution = [0 for i in range(81)]
+        self.free_squares = [0 for i in range(81)]
+
         self.invalid_puzzle = False
 
     def set_up_board(self, inputted_arr):
@@ -88,16 +61,6 @@ class Board:
         self.solution = inputted_arr.flatten().tolist()
 
         #self.update_all_squares()
-
-    """def get_mask_from_arr(self, arr):
-        current = BitwiseInt(0)
-        for i in range(9):
-            if arr[i] != 0:
-                if current.get_bit_state(arr[i] - 1):
-                    self.invalid_puzzle = True
-                current.set_bit(arr[i] - 1)
-
-        return current"""
 
     def get_mask_from_arr(self, arr):
         current = 0
@@ -139,6 +102,7 @@ class Board:
         self.boxes[square_box] |= digit_mask
 
         self.solution[square_index] = digit + 1
+        #self.free_squares.remove(square_index)
         
         #self.update_all_squares() This is inefficient
         #having squares is inefficient
@@ -157,6 +121,7 @@ class Board:
         self.boxes[square_box] &= digit_mask
 
         self.solution[square_index] = 0
+        #self.free_squares.append(square_index)
 
     def calculate_box(self, square_index):
         #Gonna precompute values for speed - 1 list lookup is probably faster than calculating it all
@@ -203,23 +168,26 @@ class Board:
         best_square = -1
         MRV_val = 10 #cant get 10 wrong 
     
-        for i in range(81):
-            if self.solution[i] != 0:
+        for index in range(81) :
+            if self.solution[index] != 0:
                 continue
 
-            current = self.get_candidate_mask(i)
+            current = self.get_candidate_mask(index)
             
             if current == 0b111111111:
                 return -1 #kill the child
 
             holes = 9 - current.bit_count()
 
+            
             if holes == 1:
-                return i
+                return index
+
+            
 
             if holes < MRV_val:
                 MRV_val = holes
-                best_square = i
+                best_square = index
 
         return best_square
 
@@ -312,23 +280,6 @@ class Game:
         return True
 
     def main_loop(self):
-
-        #ON TURN
-        """
-            - Take the next available child from the current node
-            - Push the current node to the stack
-            - Make the current node the next available
-            - Apply move described by current node
-            - Expand its children
-            - If no children, puzzle complete
-            - Otherwise, repeat
-            - If we find a contradiction, i.e. square not solved but no available
-                - Pop the previous node
-                - Increment the child counter
-                - Expand that next node
-                - If child counter == num children (out of range)
-                - Pop again
-        """
 
         while self.is_solution:
 
